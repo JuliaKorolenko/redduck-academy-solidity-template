@@ -1,7 +1,7 @@
 {
-  "name": "blockchain-academy-solidity-template",
+  "name": "redduck-academy-solidity-template",
   "version": "1.0.0",
-  "description": "Template repository for Solidity tasks in the Blockchain Academy course.",
+  "description": "Template repository for Solidity tasks in the Redduck Academy course.",
   "license": "MIT",
   "type": "module",
   "engines": {
