@@ -1,6 +1,6 @@
-# Blockchain Academy — Solidity Template
+# Redduck Academy — Solidity Template
 
-Template repo for the Solidity track of the Blockchain Academy course, run by
+Template repo for the Solidity track of the Solidity Blockchain course, run by
 [Redduck](https://redduck.io). Course materials, task briefs, and submission
 live on [academy.redduck.io](https://academy.redduck.io). Clone this repo,
 work through the tasks, push to your fork, and submit the URL on the academy
