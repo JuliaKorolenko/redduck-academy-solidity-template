@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract Token is IERC20 {
     string public name;
     string public symbol;
-    uint256 public totalAmount;
+    uint256 private _totalSupply;
     uint8 public constant decimals = 18;
 
     mapping(address => uint256) private balances;
@@ -20,7 +20,7 @@ contract Token is IERC20 {
     constructor(string memory name_, string memory symbol_, uint256 initialSupply) {
         name = name_;
         symbol = symbol_;
-        totalAmount = initialSupply;
+        _totalSupply = initialSupply;
 
         balances[msg.sender] = initialSupply;
         emit Transfer(address(0), msg.sender, initialSupply);
@@ -40,7 +40,7 @@ contract Token is IERC20 {
     }
 
     function totalSupply() external view returns (uint256) {
-        return totalAmount;
+        return _totalSupply;
     }
 
     function balanceOf(address account) external view returns (uint256) {
