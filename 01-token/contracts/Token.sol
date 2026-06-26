@@ -13,8 +13,10 @@ contract Token is IERC20 {
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
 
-    // event Transfer(address from, address to, uint256 value);
-    // event Approval(address owner, address spender, uint256 value);
+    error InsufficientBalance();
+    error TransferToZeroAddress();
+    error ApproveToZeroAddress();
+    error InsufficientAllowance();
 
     constructor(string memory name_, string memory symbol_, uint256 initialSupply) {
         name = name_;
@@ -44,14 +46,42 @@ contract Token is IERC20 {
     }
 
     function transfer(address to, uint256 value) external returns (bool) {
-        // TODO
+        if (balances[msg.sender] < value) {
+            revert InsufficientBalance();
+        }
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+
+        balances[msg.sender] -= value;
+        balances[to] += value;
+        emit Transfer(msg.sender, to, value);
+        return true;
     }
 
     function approve(address spender, uint256 value) external returns (bool) {
-        // TODO
+        if (spender == address(0)) {
+            revert ApproveToZeroAddress();
+        }
+
+        allowances[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        return true;
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
-        // TODO
+        if (balances[from] < value) {
+            revert InsufficientBalance();
+        }
+        if (allowances[from][msg.sender] < value) {
+            revert InsufficientAllowance();
+        }
+
+        allowances[from][msg.sender] -= value;
+        balances[to] += value;
+        balances[from] -= value;
+        emit Transfer(from, to, value);
+
+        return true;
     }
 }
