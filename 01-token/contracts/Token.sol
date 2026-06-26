@@ -6,10 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract Token is IERC20 {
     string public name;
     string public symbol;
-    uint8 public constant decimals = 18;
     uint256 public totalAmount;
+    uint8 public constant decimals = 18;
 
-    // TODO: declare storage for totalSupply, balances, and allowances.
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
 
@@ -23,14 +22,21 @@ contract Token is IERC20 {
         symbol = symbol_;
         totalAmount = initialSupply;
 
-        initialize(initialSupply);
-        // TODO: credit `initialSupply` to msg.sender and emit a Transfer event
-        //       from the zero address to msg.sender for the same amount.
-    }
-
-    function initialize(uint256 initialSupply) internal {
         balances[msg.sender] = initialSupply;
         emit Transfer(address(0), msg.sender, initialSupply);
+    }
+
+    function _internalTransfer(address from, address to, uint256 value) internal {
+        if (balances[from] < value) {
+            revert InsufficientBalance();
+        }
+        if (to == address(0)) {
+            revert TransferToZeroAddress();
+        }
+
+        balances[from] -= value;
+        balances[to] += value;
+        emit Transfer(from, to, value);
     }
 
     function totalSupply() external view returns (uint256) {
@@ -46,16 +52,7 @@ contract Token is IERC20 {
     }
 
     function transfer(address to, uint256 value) external returns (bool) {
-        if (balances[msg.sender] < value) {
-            revert InsufficientBalance();
-        }
-        if (to == address(0)) {
-            revert TransferToZeroAddress();
-        }
-
-        balances[msg.sender] -= value;
-        balances[to] += value;
-        emit Transfer(msg.sender, to, value);
+        _internalTransfer(msg.sender, to, value);
         return true;
     }
 
@@ -70,17 +67,11 @@ contract Token is IERC20 {
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
-        if (balances[from] < value) {
-            revert InsufficientBalance();
-        }
         if (allowances[from][msg.sender] < value) {
             revert InsufficientAllowance();
         }
-
+        _internalTransfer(from, to, value);
         allowances[from][msg.sender] -= value;
-        balances[to] += value;
-        balances[from] -= value;
-        emit Transfer(from, to, value);
 
         return true;
     }
