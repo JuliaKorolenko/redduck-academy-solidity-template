@@ -17,6 +17,14 @@ contract PriceVoting {
     //       balance, the current leader, the finalized price, and a finalized
     //       flag.
 
+    IERC20 private curToken;
+    uint256 private curVotingEnd;
+    uint256 private _finalizedPrice;
+    uint256 private _finalizedWeight;
+
+    mapping(uint256 => uint256) private _weightOf;
+    mapping(address => uint256) private _lockedOf;
+
     error VotingEnded();
     error VotingActive();
     error AlreadyFinalized();
@@ -29,13 +37,28 @@ contract PriceVoting {
     event Claimed(address indexed voter, uint256 amount);
 
     constructor(IERC20 _token, uint256 _votingEnd) {
-        // TODO: store the token reference and the voting end timestamp.
+        curToken = _token;
+        curVotingEnd = _votingEnd;
     }
 
     // ----- write -----
 
     function vote(uint256 price, uint256 amount) external {
-        // TODO
+        if (block.timestamp >= curVotingEnd) revert VotingEnded();
+        if (amount == 0) revert ZeroAmount();
+
+        bool success = curToken.transferFrom(msg.sender, address(this), amount);
+        if (!success) revert TransferFailed();
+
+        _lockedOf[msg.sender] += amount;
+        _weightOf[price] += amount;
+
+        if (_weightOf[price] > _finalizedWeight) {
+            _finalizedPrice = price;
+            _finalizedWeight = _weightOf[price];
+            emit PriceFinalized(price, _weightOf[price]);
+        }
+        emit Voted(msg.sender, price, amount);
     }
 
     function finalize() external {
@@ -49,19 +72,19 @@ contract PriceVoting {
     // ----- read -----
 
     function token() external view returns (IERC20) {
-        // TODO
+        return curToken;
     }
 
     function votingEnd() external view returns (uint256) {
-        // TODO
+        return curVotingEnd;
     }
 
     function weightOf(uint256 price) external view returns (uint256) {
-        // TODO
+        return _weightOf[price];
     }
 
     function lockedOf(address voter) external view returns (uint256) {
-        // TODO
+        return _lockedOf[voter];
     }
 
     function leader() external view returns (uint256 price, uint256 weight) {

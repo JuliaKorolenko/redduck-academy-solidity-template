@@ -50,6 +50,9 @@ describe("PriceVoting", function () {
         "Voted",
         [getAddress(alice.account.address), 100n, parseEther("50")],
       );
+
+      // console.log("vote locked: ", await voting.read.lockedOf([alice.account.address]));
+      // console.log("vote weight: ", await voting.read.weightOf([100n]));
     });
   });
 
