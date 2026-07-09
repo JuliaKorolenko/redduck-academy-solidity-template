@@ -21,6 +21,8 @@ contract PriceVoting {
     uint256 private curVotingEnd;
     uint256 private _finalizedPrice;
     uint256 private _finalizedWeight;
+    bool private _finalized;
+    uint256 private _currentTokenPrice;
 
     mapping(uint256 => uint256) private _weightOf;
     mapping(address => uint256) private _lockedOf;
@@ -41,8 +43,6 @@ contract PriceVoting {
         curVotingEnd = _votingEnd;
     }
 
-    // ----- write -----
-
     function vote(uint256 price, uint256 amount) external {
         if (block.timestamp >= curVotingEnd) revert VotingEnded();
         if (amount == 0) revert ZeroAmount();
@@ -62,7 +62,17 @@ contract PriceVoting {
     }
 
     function finalize() external {
-        // TODO
+        if (block.timestamp < curVotingEnd) revert VotingActive();
+        if (_finalized) revert AlreadyFinalized();
+
+        _finalized = true;
+
+        if (_finalizedWeight == 0) {
+            _finalizedPrice = 0;
+        }
+
+        _currentTokenPrice = _finalizedPrice;
+        emit PriceFinalized(_finalizedPrice, _finalizedWeight);
     }
 
     function claim() external {
@@ -88,14 +98,14 @@ contract PriceVoting {
     }
 
     function leader() external view returns (uint256 price, uint256 weight) {
-        // TODO
+        return (_finalizedPrice, _finalizedWeight);
     }
 
     function currentTokenPrice() external view returns (uint256) {
-        // TODO
+        return _currentTokenPrice;
     }
 
     function finalized() external view returns (bool) {
-        // TODO
+        return _finalized;
     }
 }
