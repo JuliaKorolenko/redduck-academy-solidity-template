@@ -82,7 +82,9 @@ contract PriceVoting {
         if (lockedAmount == 0) revert NothingToClaim();
 
         _lockedOf[msg.sender] = 0;
-        curToken.transfer(msg.sender, lockedAmount);
+        bool success = curToken.transfer(msg.sender, lockedAmount);
+        if (!success) revert TransferFailed();
+
         emit Claimed(msg.sender, lockedAmount);
     }
 
