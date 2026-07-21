@@ -61,8 +61,7 @@ contract Pair is ERC20 {
 
         _mint(msg.sender, liquidity);
 
-        reserve0 += amount0;
-        reserve1 += amount1;
+        _updateReserves();
 
         emit LiquidityAdded(msg.sender, amount0, amount1, liquidity);
     }
@@ -81,11 +80,10 @@ contract Pair is ERC20 {
 
         _burn(msg.sender, liquidity);
 
-        reserve0 -= amount0;
-        reserve1 -= amount1;
-
         token0.transfer(msg.sender, amount0);
         token1.transfer(msg.sender, amount1);
+
+        _updateReserves();
 
         emit LiquidityRemoved(msg.sender, amount0, amount1, liquidity);
     }
@@ -112,16 +110,10 @@ contract Pair is ERC20 {
 
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
 
-        if (tokenIn == address(token0)) {
-            reserve0 += amountIn;
-            reserve1 -= amountOut;
-        } else {
-            reserve1 += amountIn;
-            reserve0 -= amountOut;
-        }
-
         address tokenOut = tokenIn == address(token0) ? address(token1) : address(token0);
         IERC20(tokenOut).transfer(msg.sender, amountOut);
+
+        _updateReserves();
 
         emit Swapped(msg.sender, tokenIn, amountIn, amountOut);
     }
@@ -141,5 +133,10 @@ contract Pair is ERC20 {
 
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function _updateReserves() internal {
+        reserve0 = token0.balanceOf(address(this));
+        reserve1 = token1.balanceOf(address(this));
     }
 }
