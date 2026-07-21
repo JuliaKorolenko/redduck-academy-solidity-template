@@ -128,34 +128,42 @@ describe("Additional Pair Tests", function () {
     assert.equal(reserve1After, reserve1Before - expectedAmount1);
   });
 
-  it("swaps token1 to token0", async function () {
+  it("swaps correctly in both directions", async function () {
     const { pair, tokenA, tokenB, alice } = await deployFixture();
 
     await pair.write.addLiquidity([parseEther("1000"), parseEther("1000")]);
 
-    const r0Before = await pair.read.reserve0();
+    //
+    // token0 -> token1
+    //
+    let r0 = await pair.read.reserve0();
+    let r1 = await pair.read.reserve1();
 
-    const r1Before = await pair.read.reserve1();
+    const amountIn0 = parseEther("100");
+    const amountOut0 = await pair.read.getAmountOut([amountIn0, r0, r1]);
 
-    const amountIn = parseEther("100");
-
-    const expectedOut = await pair.read.getAmountOut([amountIn, r1Before, r0Before]);
-
-    const kBefore = r0Before * r1Before;
-
-    await pair.write.swap([tokenB.address, amountIn, 0n], {
+    await pair.write.swap([tokenA.address, amountIn0, 0n], {
       account: alice.account,
     });
 
-    const r0After = await pair.read.reserve0();
+    assert.equal(await pair.read.reserve0(), r0 + amountIn0);
+    assert.equal(await pair.read.reserve1(), r1 - amountOut0);
 
-    const r1After = await pair.read.reserve1();
+    //
+    // token1 -> token0
+    //
+    r0 = await pair.read.reserve0();
+    r1 = await pair.read.reserve1();
 
-    assert.equal(r0After, r0Before - expectedOut);
+    const amountIn1 = parseEther("100");
+    const amountOut1 = await pair.read.getAmountOut([amountIn1, r1, r0]);
 
-    assert.equal(r1After, r1Before + amountIn);
+    await pair.write.swap([tokenB.address, amountIn1, 0n], {
+      account: alice.account,
+    });
 
-    assert.ok(r0After * r1After > kBefore);
+    assert.equal(await pair.read.reserve0(), r0 - amountOut1);
+    assert.equal(await pair.read.reserve1(), r1 + amountIn1);
   });
 
   it("reverts if minAmountOut is too high", async function () {
