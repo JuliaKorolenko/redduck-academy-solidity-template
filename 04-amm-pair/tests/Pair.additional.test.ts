@@ -84,27 +84,51 @@ describe("Additional Pair Tests", function () {
     assert.equal(await pair.read.reserve1(), parseEther("1500"));
   });
 
-  it("removes liquidity", async function () {
+  it("burns LP tokens and returns a proportional share of both reserves", async function () {
     const { pair, tokenA, tokenB, deployer } = await deployFixture();
 
     await pair.write.addLiquidity([parseEther("1000"), parseEther("1000")]);
 
-    const lp = await pair.read.balanceOf([deployer.account.address]);
+    const lpBalance = await pair.read.balanceOf([deployer.account.address]);
+
+    const totalSupplyBefore = await pair.read.totalSupply();
+
+    const reserve0Before = await pair.read.reserve0();
+    const reserve1Before = await pair.read.reserve1();
 
     const balance0Before = await tokenA.read.balanceOf([deployer.account.address]);
 
     const balance1Before = await tokenB.read.balanceOf([deployer.account.address]);
 
-    await pair.write.removeLiquidity([lp]);
+    const expectedAmount0 = (lpBalance * reserve0Before) / totalSupplyBefore;
+
+    const expectedAmount1 = (lpBalance * reserve1Before) / totalSupplyBefore;
+
+    await pair.write.removeLiquidity([lpBalance]);
+
+    const totalSupplyAfter = await pair.read.totalSupply();
+
+    const reserve0After = await pair.read.reserve0();
+    const reserve1After = await pair.read.reserve1();
+
+    const balance0After = await tokenA.read.balanceOf([deployer.account.address]);
+
+    const balance1After = await tokenB.read.balanceOf([deployer.account.address]);
 
     assert.equal(await pair.read.balanceOf([deployer.account.address]), 0n);
 
-    assert.ok((await tokenA.read.balanceOf([deployer.account.address])) > balance0Before);
+    assert.equal(totalSupplyAfter, totalSupplyBefore - lpBalance);
 
-    assert.ok((await tokenB.read.balanceOf([deployer.account.address])) > balance1Before);
+    assert.equal(balance0After, balance0Before + expectedAmount0);
+
+    assert.equal(balance1After, balance1Before + expectedAmount1);
+
+    assert.equal(reserve0After, reserve0Before - expectedAmount0);
+
+    assert.equal(reserve1After, reserve1Before - expectedAmount1);
   });
 
-  it("swaps tokenB for tokenA", async function () {
+  it("swaps token1 to token0", async function () {
     const { pair, tokenA, tokenB, alice } = await deployFixture();
 
     await pair.write.addLiquidity([parseEther("1000"), parseEther("1000")]);
@@ -190,6 +214,28 @@ describe("Additional Pair Tests", function () {
     const { pair } = await deployFixture();
 
     await assert.rejects(pair.read.getAmountOut([0n, parseEther("100"), parseEther("100")]));
+  });
+
+  it("uses the smaller deposit when liquidity is added out of ratio", async function () {
+    const { pair, alice } = await deployFixture();
+
+    await pair.write.addLiquidity([parseEther("1000"), parseEther("1000")]);
+
+    const supplyBefore = await pair.read.totalSupply();
+
+    await pair.write.addLiquidity([parseEther("500"), parseEther("300")], {
+      account: alice.account,
+    });
+
+    const aliceLP = await pair.read.balanceOf([alice.account.address]);
+
+    const expected = (parseEther("300") * supplyBefore) / parseEther("1000");
+
+    assert.equal(aliceLP, expected);
+
+    assert.equal(await pair.read.reserve0(), parseEther("1500"));
+
+    assert.equal(await pair.read.reserve1(), parseEther("1300"));
   });
 
   // it("", async function() {});
