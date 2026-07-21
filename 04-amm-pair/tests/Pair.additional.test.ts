@@ -37,7 +37,6 @@ describe("Additional Pair Tests", function () {
     assert.equal(reserve1, parseEther("1000"));
 
     const LPBalance = (await pair.read.balanceOf([deployer.account.address])) as bigint;
-    // assert.equal(LPBalance, parseEther("1000"));
     assert.ok(LPBalance > 0n, "deployer should have LP tokens");
   });
 
