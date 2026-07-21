@@ -89,8 +89,10 @@ describe("Additional Pair Tests", function () {
     assert.equal(await pair.read.reserve1(), parseEther("1000"));
 
     const lp = await pair.read.balanceOf([deployer.account.address]);
+    const minimum = (await pair.read.MINIMUM_LIQUIDITY()) as bigint;
+    const expectedLP = parseEther("1000") - minimum;
 
-    assert.ok(lp > 0n);
+    assert.equal(lp, expectedLP);
 
     assert.equal(
       await tokenA.read.balanceOf([deployer.account.address]),
