@@ -31,16 +31,53 @@ contract MerkleAirdrop {
     }
 
     function claim(uint256 amount, bytes32[] calldata proof) external {
-        // TODO
+        if (hasClaimed[msg.sender]) {
+            revert AlreadyClaimed();
+        }
+
+        if (!_verify(proof, keccak256(abi.encodePacked(msg.sender, amount)))) {
+            revert InvalidProof();
+        }
+
+        hasClaimed[msg.sender] = true;
+        token.transfer(msg.sender, amount);
+        emit Claimed(msg.sender, amount);
     }
 
     function claimWithSignature(uint256 amount, uint8 v, bytes32 r, bytes32 s) external {
-        // TODO
+        if (hasClaimed[msg.sender]) {
+            revert AlreadyClaimed();
+        }
+
+        // address recovered = ecrecover(keccak256(abi.encodePacked(address(this), msg.sender, amount)), v, r, s);
+        // address recovered = ecrecover(keccak256(abi.encodePacked(msg.sender, amount)), v, r, s);
+
+        bytes32 ethHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", keccak256(abi.encodePacked(msg.sender, amount)))
+        );
+        address recovered = ecrecover(ethHash, v, r, s);
+
+        if (recovered != signer || recovered == address(0)) {
+            revert InvalidSignature();
+        }
+
+        hasClaimed[msg.sender] = true;
+        token.transfer(msg.sender, amount);
+        emit Claimed(msg.sender, amount);
     }
 
     // Verify that `proof` connects `leaf` to `merkleRoot`. The leaf format and the
     // node-combination rule used here must match tests/merkle.ts.
     function _verify(bytes32[] calldata proof, bytes32 leaf) internal view returns (bool) {
-        // TODO
+        bytes32 res = leaf;
+        for (uint256 i = 0; i < proof.length; i++) {
+            if (res < proof[i]) {
+                res = keccak256(abi.encodePacked(res, proof[i]));
+            } else {
+                res = keccak256(abi.encodePacked(proof[i], res));
+            }
+        }
+
+        return res == merkleRoot;
     }
 }

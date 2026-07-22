@@ -12,26 +12,52 @@ export interface AirdropEntry {
 
 // Hash one airdrop entry into a leaf.
 export function hashLeaf(entry: AirdropEntry): Hex {
-  // TODO
-  throw new Error("hashLeaf not implemented");
+  return keccak256(encodePacked(["address", "uint256"], [entry.account, entry.amount]));
 }
 
 export class MerkleTree {
   layers: Hex[][];
 
   constructor(entries: AirdropEntry[]) {
-    // TODO: build the tree layers from the leaves up to a single root.
-    this.layers = [];
+    const leaves = entries.map(hashLeaf);
+    this.layers = [leaves];
+
+    while (this.layers[this.layers.length - 1].length > 1) {
+      const current = this.layers[this.layers.length - 1];
+
+      if (current.length % 2 !== 0) {
+        current.push(current[current.length - 1]);
+      }
+
+      const next: Hex[] = [];
+
+      for (let i = 0; i < current.length; i += 2) {
+        if (current[i] < current[i + 1]) {
+          next.push(keccak256(concat([current[i], current[i + 1]])));
+        } else {
+          next.push(keccak256(concat([current[i + 1], current[i]])));
+        }
+      }
+
+      this.layers.push(next);
+    }
   }
 
   get root(): Hex {
-    // TODO
-    throw new Error("root not implemented");
+    return this.layers[this.layers.length - 1][0];
   }
 
   // The sibling hashes from the leaf at `index` up to the root.
   getProof(index: number): Hex[] {
-    // TODO
-    throw new Error("getProof not implemented");
+    const proof: Hex[] = [];
+    let curIdx = index;
+
+    for (let i = 0; i < this.layers.length - 1; i++) {
+      const sibling = curIdx % 2 === 0 ? this.layers[i][curIdx + 1] : this.layers[i][curIdx - 1];
+      proof.push(sibling);
+      curIdx = Math.floor(curIdx / 2);
+    }
+
+    return proof;
   }
 }
