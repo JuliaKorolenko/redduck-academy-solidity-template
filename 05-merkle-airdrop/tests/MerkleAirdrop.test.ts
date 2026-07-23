@@ -68,5 +68,99 @@ describe("MerkleAirdrop", function () {
     assert.equal((await airdrop.read.hasClaimed([daveAddr])) as boolean, true);
   });
 
-  // TODO: add the failure-mode tests from TASK.md.
+  it("claim reverts if proof is invalid", async function () {
+    const { airdrop, alice } = await deployFixture();
+
+    const fakeProof = [
+      "0x1234567890123456789012345678901234567890123456789012345678901234" as `0x${string}`,
+      "0x7890123456789012345678901234567890123456789012345678901234123456" as `0x${string}`,
+    ];
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claim([parseEther("100"), fakeProof], { account: alice.account }),
+      airdrop,
+      "InvalidProof",
+    );
+  });
+
+  it("claimWithSignature reverts if signature is invalid", async function () {
+    const { airdrop, dave } = await deployFixture();
+
+    const daveAddr = getAddress(dave.account.address);
+    const amount = parseEther("50");
+
+    const { v, r, s } = await signAirdropClaim(dave, daveAddr, amount);
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claimWithSignature([amount, v, r, s], { account: dave.account }),
+      airdrop,
+      "InvalidSignature",
+    );
+  });
+
+  it("claimWithSignature reverts if signature belongs to a different account", async function () {
+    const { airdrop, dave, alice } = await deployFixture();
+
+    const aliceAddr = getAddress(alice.account.address);
+    const amount = parseEther("50");
+
+    const { v, r, s } = await signAirdropClaim(alice, aliceAddr, amount);
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claimWithSignature([amount, v, r, s], { account: dave.account }),
+      airdrop,
+      "InvalidSignature",
+    );
+  });
+
+  it("claim reverts if the account has already claimed", async function () {
+    const { entries, tree, airdrop, alice } = await deployFixture();
+    const proof = tree.getProof(0);
+    const { account, amount } = entries[0];
+
+    await airdrop.write.claim([amount, proof], { account: alice.account });
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claim([amount, proof], { account: alice.account }),
+      airdrop,
+      "AlreadyClaimed",
+    );
+  });
+
+  it("claimWithSignature reverts if the account has already claimed", async function () {
+    const { airdrop, dave, signer } = await deployFixture();
+
+    const daveAddr = getAddress(dave.account.address);
+    const amount = parseEther("50");
+
+    const { v, r, s } = await signAirdropClaim(signer, daveAddr, amount);
+
+    await airdrop.write.claimWithSignature([amount, v, r, s], { account: dave.account });
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claimWithSignature([amount, v, r, s], { account: dave.account }),
+      airdrop,
+      "AlreadyClaimed",
+    );
+  });
+
+  it("claimWithSignature reverts if the account has already claimed with claim", async function () {
+    const { airdrop, entries, tree, signer } = await deployFixture();
+
+    const proof = tree.getProof(0);
+    const { account, amount } = entries[0];
+
+    await airdrop.write.claim([amount, proof], { account: account });
+
+    const { v, r, s } = await signAirdropClaim(signer, getAddress(account), amount);
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claimWithSignature([amount, v, r, s], { account: account }),
+      airdrop,
+      "AlreadyClaimed",
+    );
+  });
+
+  // it("", async function () {});
+  // it("", async function () {});
 });
