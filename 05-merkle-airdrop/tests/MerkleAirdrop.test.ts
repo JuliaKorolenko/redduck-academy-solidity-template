@@ -68,6 +68,36 @@ describe("MerkleAirdrop", function () {
     assert.equal((await airdrop.read.hasClaimed([daveAddr])) as boolean, true);
   });
 
+  it("emit event on claim", async function () {
+    const { entries, tree, airdrop } = await deployFixture();
+
+    const proof = tree.getProof(0);
+    const { account, amount } = entries[0];
+
+    await viem.assertions.emitWithArgs(
+      airdrop.write.claim([amount, proof], { account: account }),
+      airdrop,
+      "Claimed",
+      [account, amount],
+    );
+  });
+
+  it("emit event on claimWithSignature", async function () {
+    const { airdrop, dave, signer } = await deployFixture();
+
+    const daveAddr = getAddress(dave.account.address);
+    const amount = parseEther("50");
+
+    const { v, r, s } = await signAirdropClaim(signer, daveAddr, amount);
+
+    await viem.assertions.emitWithArgs(
+      airdrop.write.claimWithSignature([amount, v, r, s], { account: dave.account }),
+      airdrop,
+      "Claimed",
+      [daveAddr, amount],
+    );
+  });
+
   it("claim reverts if proof is invalid", async function () {
     const { airdrop, alice } = await deployFixture();
 
@@ -160,7 +190,4 @@ describe("MerkleAirdrop", function () {
       "AlreadyClaimed",
     );
   });
-
-  // it("", async function () {});
-  // it("", async function () {});
 });
