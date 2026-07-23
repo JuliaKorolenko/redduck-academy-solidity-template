@@ -190,4 +190,20 @@ describe("MerkleAirdrop", function () {
       "AlreadyClaimed",
     );
   });
+
+  it("claimWithSignature reverts if amount does not match signature", async function () {
+    const { airdrop, dave, signer } = await deployFixture();
+
+    const daveAddr = getAddress(dave.account.address);
+    const signedAmount = parseEther("50");
+    const claimedAmount = parseEther("100");
+
+    const { v, r, s } = await signAirdropClaim(signer, daveAddr, signedAmount);
+
+    await viem.assertions.revertWithCustomError(
+      airdrop.write.claimWithSignature([claimedAmount, v, r, s], { account: dave.account }),
+      airdrop,
+      "InvalidSignature",
+    );
+  });
 });
